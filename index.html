@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Bellybutton Biodiversity</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+</head>
+
+<body>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-md-12 jumbotron text-center">
+        <h1>Belly Button Biodiversity Dashboard</h1>
+        <p>Use the interactive charts below to explore the dataset</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-2">
+        <div class="well">
+          <h5>Test Subject ID No.:</h5>
+          <select id="selDataset" onchange="optionChanged(this.value)"></select>
+        </div>
+        <div class="panel panel-primary">
+          <div class="panel-heading">
+            <h3 class="panel-title">Demographic Info</h3>
+          </div>
+          <div id="sample-metadata" class="panel-body"></div>
+        </div>
+      </div>
+      <div class="col-md-5">
+        <div id="bar"></div>
+      </div>
+      <div class="col-md-5">
+        <div id="gauge"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-12">
+        <div id="bubble"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Include scripts in the correct order -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <script>
+    // Your JavaScript code goes here
+    // You can combine the code from app.js, charts.js, metadata.js, etc.
+
+    // Function to read samples.json
+    function readData() {
+      fetch("https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-classroom/v1.1/14-Interactive-Web-Visualizations/02-Homework/samples.json")
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log("Raw Data:", data); // Log the raw data
+      populateDropdown(data);
+      updateCharts(data.names[0]); // Initialize with default data
+    })
+    .catch(error => {
+      console.error('Error fetching data:', error);
+    });
+}
+
+    // Function to populate the dropdown
+    function populateDropdown(data) {
+      var dropdown = d3.select("#selDataset");
+
+      data.names.forEach(id => {
+        dropdown.append("option").text(id).property("value", id);
+      });
+    }
+
+    // Function to update all charts and metadata
+    function updateCharts(selectedID) {
+      d3.json("https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-classroom/v1.1/14-Interactive-Web-Visualizations/02-Homework/samples.json").then(data => {
+        var sampleData = data.samples.find(sample => sample.id === selectedID);
+        createBarChart(sampleData);
+        createBubbleChart(sampleData);
+        updateMetadata(selectedID);
+      });
+    }
+
+    // Function to create the bar chart
+    function createBarChart(sampleData) {
+      var barData = [{
+        x: sampleData.sample_values.slice(0, 10).reverse(),
+        y: sampleData.otu_ids.slice(0, 10).map(id => `OTU ${id}`).reverse(),
+        text: sampleData.otu_labels.slice(0, 10).reverse(),
+        type: 'bar',
+        orientation: 'h'
+      }];
+    // Define layout for the bar chart
+  var barLayout = {
+    title: 'Top 10 OTUs',
+    xaxis: { title: 'Sample Values' },
+    yaxis: { title: 'OTU IDs' }
+  };
+
+  // Use Plotly to create the bar chart
+  Plotly.newPlot('bar', barData, barLayout);
+}
+
+    // Function to create the bubble chart
+    function createBubbleChart(sampleData) {
+      // Extract data for the bubble chart
+  var bubbleData = [{
+    x: sampleData.otu_ids,
+    y: sampleData.sample_values,
+    text: sampleData.otu_labels,
+    mode: 'markers',
+    marker: {
+      size: sampleData.sample_values,
+      color: sampleData.otu_ids,
+      colorscale: 'Earth'
+    }
+  }];
+
+  // Define layout for the bubble chart
+  var bubbleLayout = {
+    title: 'Microbe Biodiversity',
+    xaxis: { title: 'OTU IDs' },
+    yaxis: { title: 'Sample Values' }
+  };
+
+  // Use Plotly to create the bubble chart
+  Plotly.newPlot('bubble', bubbleData, bubbleLayout);
+}
+
+    // Function to update metadata
+    function updateMetadata(selectedID) {
+      d3.json("https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-classroom/v1.1/14-Interactive-Web-Visualizations/02-Homework/samples.json").then(data => {
+        var metadata = data.metadata.find(entry => entry.id === parseInt(selectedID));
+        displayMetadata(metadata);
+      });
+    }
+
+    // Function to display metadata
+    function displayMetadata(metadata) {
+      // Select the HTML element with the id "sample-metadata"
+  var metadataElement = document.getElementById('sample-metadata');
+
+  // Clear any existing content in the element
+  metadataElement.innerHTML = '';
+
+  // Define the keys you want to display
+  var keysToDisplay = ["ID", "Ethnicity", "Gender", "Age", "Location", "BBType", "WFreq"];
+
+  // Iterate through the keys you want to display
+  keysToDisplay.forEach(key => {
+    // Check if the key exists in the metadata
+    if (metadata.hasOwnProperty(key)) {
+      // Create a new paragraph element
+      var paragraph = document.createElement('p');
+
+      // Set the text content of the paragraph to the key-value pair
+      paragraph.textContent = `${key}: ${metadata[key]}`;
+
+      // Append the paragraph to the metadata element
+      metadataElement.appendChild(paragraph);
+    }
+  });
+}
+
+    // Call the function to read data and populate dropdown
+    readData();
+  </script>
+
+</body>
+
+</html>
